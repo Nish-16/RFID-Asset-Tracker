@@ -30,7 +30,7 @@ function loadEnv() {
         })
     );
   } catch {
-    console.error("❌  Could not read .env.local");
+    console.error("[ERR]  Could not read .env.local");
     process.exit(1);
   }
 }
@@ -55,14 +55,15 @@ const STUDENT_RFID     = "DEMO001";
 const STUDENT_NAME     = "Demo Student";
 
 const COMPONENTS = [
-  { code: "ARD001", name: "Arduino UNO",          available: true  },
-  { code: "ARD002", name: "Arduino UNO",          available: false },
-  { code: "BB001",  name: "Breadboard",           available: true  },
-  { code: "SM001",  name: "Servo Motor",          available: false },
-  { code: "LCD001", name: "16×2 LCD Display",     available: true  },
-  { code: "OSC001", name: "Oscilloscope Probe",   available: true  },
-  { code: "SEN001", name: "IR Sensor",            available: false },
-  { code: "RES001", name: "Resistor Kit (100pc)", available: true  },
+  { code: "ARD",  name: "Arduino UNO",          totalCount: 3 },
+  { code: "BB",   name: "Breadboard",           totalCount: 5 },
+  { code: "SM",   name: "Servo Motor",          totalCount: 2 },
+  { code: "LCD",  name: "16×2 LCD Display",     totalCount: 2 },
+  { code: "OSC",  name: "Oscilloscope Probe",   totalCount: 1 },
+  { code: "SEN",  name: "IR Sensor",            totalCount: 4 },
+  { code: "RES",  name: "Resistor Kit (100pc)", totalCount: 6 },
+  { code: "ESP32",name: "ESP32",                totalCount: 3 },
+  { code: "RPI",  name: "Raspberry Pi 4",       totalCount: 2 },
 ];
 
 async function seedFirestore() {
@@ -73,31 +74,31 @@ async function seedFirestore() {
   await setDoc(doc(db, "students", STUDENT_RFID), {
     uid: STUDENT_RFID, name: STUDENT_NAME, roll: "2021CS001", branch: "CSE",
   });
-  console.log("✓  students doc written");
+  console.log("[OK]  students doc written");
 
   // Components
   for (const c of COMPONENTS) {
     await setDoc(doc(db, "components", c.code), c);
   }
-  console.log(`✓  ${COMPONENTS.length} components written`);
+  console.log(`[OK]  ${COMPONENTS.length} components written`);
 
   // Transactions (skip if already seeded)
   const existing = await getDocs(
     query(collection(db, "transactions"), where("uid", "==", STUDENT_RFID))
   );
   if (existing.size > 0) {
-    console.log("ℹ  Transactions already seeded — skipping");
+    console.log("[INFO]  Transactions already seeded -- skipping");
   } else {
     const txs = [
-      { uid: STUDENT_RFID,  studentName: STUDENT_NAME,    componentCode: "ARD002", componentName: "Arduino UNO",       issueTime: new Date(now - 2*hr).toISOString(), returnTime: null,                               status: "issued"   },
-      { uid: STUDENT_RFID,  studentName: STUDENT_NAME,    componentCode: "SM001",  componentName: "Servo Motor",       issueTime: new Date(now - 3*hr).toISOString(), returnTime: null,                               status: "issued"   },
-      { uid: STUDENT_RFID,  studentName: STUDENT_NAME,    componentCode: "BB001",  componentName: "Breadboard",        issueTime: new Date(now - 5*hr).toISOString(), returnTime: new Date(now - 1*hr).toISOString(), status: "returned" },
-      { uid: "A1B2C3D4",    studentName: "Rahul Sharma",  componentCode: "SEN001", componentName: "IR Sensor",         issueTime: new Date(now - 4*hr).toISOString(), returnTime: null,                               status: "issued"   },
-      { uid: "E5F6G7H8",    studentName: "Priya Patel",   componentCode: "LCD001", componentName: "16×2 LCD Display",  issueTime: new Date(now - 6*hr).toISOString(), returnTime: new Date(now - 2*hr).toISOString(), status: "returned" },
-      { uid: "K9L0M1N2",    studentName: "Amit Rathore",  componentCode: "OSC001", componentName: "Oscilloscope Probe",issueTime: new Date(now - 7*hr).toISOString(), returnTime: new Date(now - 3*hr).toISOString(), status: "returned" },
+      { uid: STUDENT_RFID,  studentName: STUDENT_NAME,    componentCode: "ARD",  componentName: "Arduino UNO",          issueTime: new Date(now - 2*hr).toISOString(), returnTime: null,                               status: "issued"   },
+      { uid: STUDENT_RFID,  studentName: STUDENT_NAME,    componentCode: "SM",   componentName: "Servo Motor",          issueTime: new Date(now - 3*hr).toISOString(), returnTime: null,                               status: "issued"   },
+      { uid: STUDENT_RFID,  studentName: STUDENT_NAME,    componentCode: "BB",   componentName: "Breadboard",           issueTime: new Date(now - 5*hr).toISOString(), returnTime: new Date(now - 1*hr).toISOString(), status: "returned" },
+      { uid: "A1B2C3D4",    studentName: "Rahul Sharma",  componentCode: "SEN",  componentName: "IR Sensor",            issueTime: new Date(now - 4*hr).toISOString(), returnTime: null,                               status: "issued"   },
+      { uid: "E5F6G7H8",    studentName: "Priya Patel",   componentCode: "LCD",  componentName: "16x2 LCD Display",     issueTime: new Date(now - 6*hr).toISOString(), returnTime: new Date(now - 2*hr).toISOString(), status: "returned" },
+      { uid: "K9L0M1N2",    studentName: "Amit Rathore",  componentCode: "OSC",  componentName: "Oscilloscope Probe",   issueTime: new Date(now - 7*hr).toISOString(), returnTime: new Date(now - 3*hr).toISOString(), status: "returned" },
     ];
     for (const tx of txs) await addDoc(collection(db, "transactions"), tx);
-    console.log(`✓  ${txs.length} transactions written`);
+    console.log(`[OK]  ${txs.length} transactions written`);
   }
 }
 
@@ -108,18 +109,18 @@ async function createStudentAuth() {
     await setDoc(doc(db, "users", uid), {
       role: "student", name: STUDENT_NAME, rfidUid: STUDENT_RFID,
     });
-    console.log("✓  Student auth user created:", uid);
-    console.log("✓  users doc written");
+    console.log("[OK]  Student auth user created:", uid);
+    console.log("[OK]  users doc written");
     return true;
   } catch (e) {
     if (e.code === "auth/email-already-in-use") {
-      console.log("ℹ  Student auth user already exists");
+      console.log("[INFO]  Student auth user already exists");
       return true;
     }
     if (e.code === "auth/configuration-not-found" || e.code === "auth/operation-not-allowed") {
-      console.log("⚠   Email/Password auth not enabled yet — skipping auth user");
-      console.log("    → Firebase Console → Authentication → Sign-in method → Email/Password → Enable");
-      console.log("    → Re-run this script after enabling it");
+      console.log("[WARN]  Email/Password auth not enabled yet -- skipping auth user");
+      console.log("        Firebase Console -> Authentication -> Sign-in method -> Email/Password -> Enable");
+      console.log("        Re-run this script after enabling it");
       return false;
     }
     throw e;
@@ -127,30 +128,30 @@ async function createStudentAuth() {
 }
 
 async function seed() {
-  console.log("\n🌱  Seeding:", env.NEXT_PUBLIC_FIREBASE_PROJECT_ID, "\n");
+  console.log("\n[SEED]  Seeding:", env.NEXT_PUBLIC_FIREBASE_PROJECT_ID, "\n");
 
   await seedFirestore();
   const authOk = await createStudentAuth();
 
   console.log(`
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+------------------------------------
   Credentials
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Admin  (hardcoded — works now)
+------------------------------------
+  Admin  (hardcoded)
     Username : admin
     Password : admin123
 
   Demo Student  (Firebase Auth)
     Email    : student@lab.local
     Password : student123
-    ${authOk ? "Status   : ✓ Ready" : "Status   : ⚠  Enable Email/Password auth, then re-run"}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    ${authOk ? "Status   : [OK] Ready" : "Status   : [WARN] Enable Email/Password auth, then re-run"}
+------------------------------------
 `);
 
   process.exit(0);
 }
 
 seed().catch((e) => {
-  console.error("\n❌  Seed failed:", e.message);
+  console.error("\n[ERR]  Seed failed:", e.message);
   process.exit(1);
 });

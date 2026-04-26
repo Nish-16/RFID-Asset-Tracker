@@ -6,14 +6,15 @@ import { useAuth } from "@/lib/auth-context";
 import TransactionTable from "@/components/TransactionTable";
 
 export default function DashboardPage() {
-  const { user, loading } = useAuth();
+  const { profile, loading } = useAuth();
   const router = useRouter();
+  const isAdmin = profile?.role === "admin";
 
   useEffect(() => {
-    if (!loading && !user) router.replace("/login");
-  }, [user, loading, router]);
+    if (!loading && !isAdmin) router.replace("/login");
+  }, [isAdmin, loading, router]);
 
-  if (loading || !user) {
+  if (loading || !isAdmin) {
     return (
       <div className="flex min-h-96 items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-slate-200 border-t-indigo-500" />

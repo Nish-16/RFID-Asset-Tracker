@@ -48,10 +48,10 @@ export default function LoginPage() {
               <Wifi className="h-7 w-7 text-white" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Welcome back
+              Admin Sign In
             </h1>
             <p className="mt-1.5 text-sm text-slate-500">
-              Sign in to access RFID Tracker
+              Students can browse inventory without signing in
             </p>
           </div>
 
@@ -72,7 +72,7 @@ export default function LoginPage() {
             <div className="space-y-4">
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-                  Username or Email
+                  Username
                 </label>
                 <div className="relative">
                   <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -82,7 +82,7 @@ export default function LoginPage() {
                     onChange={(e) => setUsername(e.target.value)}
                     required
                     autoComplete="username"
-                    placeholder="admin or you@example.com"
+                    placeholder="admin"
                     className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-slate-800 outline-none placeholder:text-slate-400 transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100"
                   />
                 </div>
@@ -120,10 +120,16 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 flex flex-col items-center gap-3 text-center">
+            <Link
+              href="/inventory"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 transition hover:text-indigo-800"
+            >
+              Browse component inventory without signing in
+            </Link>
             <Link
               href="/"
-              className="inline-flex items-center gap-1.5 text-sm text-slate-500 transition hover:text-slate-800"
+              className="inline-flex items-center gap-1.5 text-sm text-slate-400 transition hover:text-slate-700"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
               Back to home
