@@ -13,7 +13,7 @@ import { useAuth } from "@/lib/auth-context";
 
 interface Transaction {
   id: string;
-  uid: string;
+  rfidUid: string;
   componentCode: string;
   studentName: string;
   componentName: string;
@@ -56,7 +56,8 @@ const AVATAR_COLORS = [
 
 function avatarColor(name: string) {
   let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
+  for (let i = 0; i < name.length; i++)
+    h = (h * 31 + name.charCodeAt(i)) & 0xffff;
   return AVATAR_COLORS[h % AVATAR_COLORS.length];
 }
 
@@ -80,14 +81,20 @@ export default function TransactionTable() {
 
     const q = isAdmin
       ? query(collection(db, "transactions"), orderBy("issueTime", "desc"))
-      // Students: filter by their RFID uid, sort client-side (avoids composite index)
-      : query(collection(db, "transactions"), where("uid", "==", profile!.rfidUid));
+      : // Students: filter by their RFID uid, sort client-side (avoids composite index)
+        query(
+          collection(db, "transactions"),
+          where("rfidUid", "==", profile!.rfidUid),
+        );
 
     const unsub = onSnapshot(q, (snap) => {
-      let data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Transaction));
+      let data = snap.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() }) as Transaction,
+      );
       if (!isAdmin) {
         data = data.sort(
-          (a, b) => new Date(b.issueTime).getTime() - new Date(a.issueTime).getTime()
+          (a, b) =>
+            new Date(b.issueTime).getTime() - new Date(a.issueTime).getTime(),
         );
       }
       setTransactions(data);
@@ -98,7 +105,9 @@ export default function TransactionTable() {
   }, [authLoading, isAdmin, profile?.rfidUid]);
 
   const issuedCount = transactions.filter((t) => t.status === "issued").length;
-  const returnedCount = transactions.filter((t) => t.status === "returned").length;
+  const returnedCount = transactions.filter(
+    (t) => t.status === "returned",
+  ).length;
 
   const filtered = transactions.filter((t) => {
     const matchesFilter = filter === "all" || t.status === filter;
@@ -106,7 +115,7 @@ export default function TransactionTable() {
     const matchesSearch =
       !s ||
       t.studentName?.toLowerCase().includes(s) ||
-      t.uid?.toLowerCase().includes(s) ||
+      t.rfidUid?.toLowerCase().includes(s) ||
       t.componentName?.toLowerCase().includes(s);
     return matchesFilter && matchesSearch;
   });
@@ -148,8 +157,18 @@ export default function TransactionTable() {
           iconClass="bg-slate-100 text-slate-600"
           valueClass="text-slate-800"
           icon={
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.8}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z"
+              />
             </svg>
           }
         />
@@ -159,8 +178,18 @@ export default function TransactionTable() {
           iconClass="bg-amber-50 text-amber-600"
           valueClass="text-amber-700"
           icon={
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7a6 6 0 11-8.485-8.486 6 6 0 018.486 8.485z" />
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.8}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7a6 6 0 11-8.485-8.486 6 6 0 018.486 8.485z"
+              />
             </svg>
           }
         />
@@ -170,8 +199,18 @@ export default function TransactionTable() {
           iconClass="bg-emerald-50 text-emerald-600"
           valueClass="text-emerald-700"
           icon={
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.8}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
           }
         />
@@ -180,31 +219,64 @@ export default function TransactionTable() {
       {/* Controls */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative sm:w-80">
-          <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          <svg
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+            />
           </svg>
           <input
             type="text"
-            placeholder={isAdmin ? "Search name, UID, or component..." : "Search component..."}
+            placeholder={
+              isAdmin
+                ? "Search name, UID, or component..."
+                : "Search component..."
+            }
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-4 text-sm text-slate-800 shadow-sm outline-none placeholder:text-slate-400 transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
           />
           {search && (
-            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           )}
         </div>
         <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
           {(["all", "issued", "returned"] as FilterStatus[]).map((f) => (
-            <button key={f} onClick={() => setFilter(f)}
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
               className={`rounded-md px-4 py-1.5 text-sm font-medium capitalize transition-all ${
-                filter === f ? "bg-indigo-600 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                filter === f
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
               }`}
-            >{f}</button>
+            >
+              {f}
+            </button>
           ))}
         </div>
       </div>
@@ -212,17 +284,31 @@ export default function TransactionTable() {
       {/* Table */}
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         {filtered.length === 0 ? (
-          <EmptyState hasFilters={filter !== "all" || search !== ""} isAdmin={isAdmin} hasRfid={!!profile?.rfidUid} />
+          <EmptyState
+            hasFilters={filter !== "all" || search !== ""}
+            isAdmin={isAdmin}
+            hasRfid={!!profile?.rfidUid}
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/70">
                   {(isAdmin
-                    ? ["Student", "RFID UID", "Component", "Status", "Issue Time", "Return Time"]
+                    ? [
+                        "Student",
+                        "RFID UID",
+                        "Component",
+                        "Status",
+                        "Issue Time",
+                        "Return Time",
+                      ]
                     : ["Component", "Status", "Issue Time", "Return Time"]
                   ).map((h) => (
-                    <th key={h} className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    <th
+                      key={h}
+                      className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400"
+                    >
                       {h}
                     </th>
                   ))}
@@ -230,20 +316,27 @@ export default function TransactionTable() {
               </thead>
               <tbody>
                 {filtered.map((t, i) => (
-                  <tr key={t.id} className={`border-b border-slate-50 transition-colors last:border-0 hover:bg-indigo-50/30 ${i % 2 === 1 ? "bg-slate-50/40" : ""}`}>
+                  <tr
+                    key={t.id}
+                    className={`border-b border-slate-50 transition-colors last:border-0 hover:bg-indigo-50/30 ${i % 2 === 1 ? "bg-slate-50/40" : ""}`}
+                  >
                     {isAdmin && (
                       <>
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3">
-                            <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${avatarColor(t.studentName || "")}`}>
+                            <div
+                              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${avatarColor(t.studentName || "")}`}
+                            >
                               {initials(t.studentName || "?")}
                             </div>
-                            <span className="font-medium text-slate-800">{t.studentName || "—"}</span>
+                            <span className="font-medium text-slate-800">
+                              {t.studentName || "—"}
+                            </span>
                           </div>
                         </td>
                         <td className="px-5 py-4">
                           <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-600">
-                            {t.uid || "—"}
+                            {t.rfidUid || "—"}
                           </span>
                         </td>
                       </>
@@ -254,8 +347,18 @@ export default function TransactionTable() {
                     <td className="px-5 py-4">
                       {t.status === "returned" ? (
                         <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200/60">
-                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                          <svg
+                            className="h-3 w-3"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2.5}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M4.5 12.75l6 6 9-13.5"
+                            />
                           </svg>
                           Returned
                         </span>
@@ -266,8 +369,12 @@ export default function TransactionTable() {
                         </span>
                       )}
                     </td>
-                    <td className="px-5 py-4 text-slate-500 tabular-nums">{formatTime(t.issueTime)}</td>
-                    <td className="px-5 py-4 text-slate-500 tabular-nums">{formatTime(t.returnTime)}</td>
+                    <td className="px-5 py-4 text-slate-500 tabular-nums">
+                      {formatTime(t.issueTime)}
+                    </td>
+                    <td className="px-5 py-4 text-slate-500 tabular-nums">
+                      {formatTime(t.returnTime)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -278,9 +385,17 @@ export default function TransactionTable() {
 
       {filtered.length > 0 && (
         <div className="flex items-center justify-between text-xs text-slate-400">
-          <span>Showing {filtered.length} of {transactions.length} transactions</span>
+          <span>
+            Showing {filtered.length} of {transactions.length} transactions
+          </span>
           {(filter !== "all" || search) && (
-            <button onClick={() => { setFilter("all"); setSearch(""); }} className="text-indigo-500 transition hover:text-indigo-700">
+            <button
+              onClick={() => {
+                setFilter("all");
+                setSearch("");
+              }}
+              className="text-indigo-500 transition hover:text-indigo-700"
+            >
               Clear filters
             </button>
           )}
@@ -290,38 +405,74 @@ export default function TransactionTable() {
   );
 }
 
-function StatCard({ label, value, icon, iconClass, valueClass }: {
-  label: string; value: number; icon: React.ReactNode; iconClass: string; valueClass: string;
+function StatCard({
+  label,
+  value,
+  icon,
+  iconClass,
+  valueClass,
+}: {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+  iconClass: string;
+  valueClass: string;
 }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs font-medium text-slate-500">{label}</p>
-          <p className={`mt-1.5 text-3xl font-bold tabular-nums ${valueClass}`}>{value}</p>
+          <p className={`mt-1.5 text-3xl font-bold tabular-nums ${valueClass}`}>
+            {value}
+          </p>
         </div>
-        <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${iconClass}`}>{icon}</div>
+        <div
+          className={`flex h-8 w-8 items-center justify-center rounded-lg ${iconClass}`}
+        >
+          {icon}
+        </div>
       </div>
     </div>
   );
 }
 
-function EmptyState({ hasFilters, isAdmin, hasRfid }: { hasFilters: boolean; isAdmin: boolean; hasRfid: boolean }) {
+function EmptyState({
+  hasFilters,
+  isAdmin,
+  hasRfid,
+}: {
+  hasFilters: boolean;
+  isAdmin: boolean;
+  hasRfid: boolean;
+}) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-24">
       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
-        <svg className="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+        <svg
+          className="h-6 w-6 text-slate-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.5}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+          />
         </svg>
       </div>
       <div className="text-center">
-        <p className="text-sm font-semibold text-slate-700">No transactions found</p>
+        <p className="text-sm font-semibold text-slate-700">
+          No transactions found
+        </p>
         <p className="mt-1 text-xs text-slate-400">
           {hasFilters
             ? "Try a different search or filter"
             : !isAdmin && !hasRfid
-            ? "Your account has no linked RFID card yet"
-            : "Transactions will appear here in real-time"}
+              ? "Your account has no linked RFID card yet"
+              : "Transactions will appear here in real-time"}
         </p>
       </div>
     </div>
