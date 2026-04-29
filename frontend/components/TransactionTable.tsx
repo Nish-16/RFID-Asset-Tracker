@@ -24,6 +24,19 @@ interface Transaction {
 
 type FilterStatus = "all" | "issued" | "returned";
 
+function timestampToString(val: any): string {
+  if (!val) return "";
+  // If it's a Firestore Timestamp object (has toDate method)
+  if (typeof val.toDate === "function") {
+    return val.toDate().toISOString();
+  }
+  // If it's already a string
+  if (typeof val === "string") {
+    return val;
+  }
+  return "";
+}
+
 function initials(name: string) {
   return name
     .split(" ")
@@ -80,23 +93,32 @@ export default function TransactionTable() {
     }
 
     const q = isAdmin
-      ? query(collection(db, "transactions"), orderBy("issueTime", "desc"))
-      : // Students: filter by their RFID uid, sort client-side (avoids composite index)
+      ? query(collection(db, "transactions"))
+      : // Students: filter by their RFID uid
         query(
           collection(db, "transactions"),
           where("rfidUid", "==", profile!.rfidUid),
         );
 
     const unsub = onSnapshot(q, (snap) => {
-      let data = snap.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() }) as Transaction,
+      let data = snap.docs.map((doc) => {
+        const raw = doc.data();
+        return {
+          id: doc.id,
+          rfidUid: raw.rfidUid || "",
+          componentCode: raw.componentCode || "",
+          studentName: raw.studentName || "",
+          componentName: raw.componentName || "",
+          issueTime: timestampToString(raw.issueTime),
+          returnTime: timestampToString(raw.returnTime),
+          status: raw.status || "issued",
+        } as Transaction;
+      });
+      // Sort by issueTime descending (client-side for all users)
+      data = data.sort(
+        (a, b) =>
+          new Date(b.issueTime).getTime() - new Date(a.issueTime).getTime(),
       );
-      if (!isAdmin) {
-        data = data.sort(
-          (a, b) =>
-            new Date(b.issueTime).getTime() - new Date(a.issueTime).getTime(),
-        );
-      }
       setTransactions(data);
       setLoading(false);
     });

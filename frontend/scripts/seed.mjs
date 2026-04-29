@@ -1,10 +1,5 @@
 import { initializeApp } from "firebase/app";
-import {
-  getFirestore,
-  doc,
-  setDoc,
-  getDoc,
-} from "firebase/firestore";
+import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -23,7 +18,7 @@ function loadEnv() {
       .map((l) => {
         const [k, ...v] = l.split("=");
         return [k.trim(), v.join("=").trim()];
-      })
+      }),
   );
 }
 
