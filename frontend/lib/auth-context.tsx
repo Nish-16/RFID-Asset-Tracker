@@ -1,9 +1,8 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "./firebase";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "./firebase";
 
 export interface UserProfile {
   role: "admin" | "student";
@@ -20,75 +19,85 @@ interface AuthContextValue {
   user: SimpleUser | null;
   profile: UserProfile | null;
   loading: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (identifier: string, password?: string) => Promise<void>;
   logout: () => Promise<void>;
+}
+
+interface StudentSession {
+  rfidUid: string;
+  name: string;
 }
 
 const ADMIN_USER: SimpleUser = { uid: "__admin__", email: "admin" };
 const ADMIN_PROFILE: UserProfile = { role: "admin", name: "Admin", rfidUid: null };
-const SESSION_KEY = "rfid_admin_session";
+const ADMIN_SESSION_KEY = "rfid_admin_session";
+const STUDENT_SESSION_KEY = "rfid_student_session";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [adminActive, setAdminActive] = useState(false);
-  const [firebaseUser, setFirebaseUser] = useState<SimpleUser | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [studentSession, setStudentSession] = useState<StudentSession | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Re-runs when adminActive toggles so Firebase listener is set up / torn down correctly
+  // Restore session after page refresh
   useEffect(() => {
-    if (adminActive) {
-      setProfile(ADMIN_PROFILE);
-      setLoading(false);
-      return; // no Firebase listener needed while admin is active
-    }
-
-    const unsub = onAuthStateChanged(auth, async (fu) => {
-      if (fu) {
-        const snap = await getDoc(doc(db, "users", fu.uid));
-        const p: UserProfile = snap.exists()
-          ? (snap.data() as UserProfile)
-          : { role: "student", name: fu.email ?? "", rfidUid: null };
-        setFirebaseUser({ uid: fu.uid, email: fu.email });
-        setProfile(p);
-      } else {
-        setFirebaseUser(null);
-        setProfile(null);
-      }
-      setLoading(false);
-    });
-
-    return () => unsub();
-  }, [adminActive]);
-
-  // Restore admin session after a page refresh
-  useEffect(() => {
-    if (typeof window !== "undefined" && sessionStorage.getItem(SESSION_KEY)) {
+    if (typeof window === "undefined") return;
+    if (sessionStorage.getItem(ADMIN_SESSION_KEY)) {
       setAdminActive(true);
+    } else {
+      const stored = sessionStorage.getItem(STUDENT_SESSION_KEY);
+      if (stored) {
+        try {
+          setStudentSession(JSON.parse(stored));
+        } catch {
+          sessionStorage.removeItem(STUDENT_SESSION_KEY);
+        }
+      }
     }
+    setLoading(false);
   }, []);
 
-  const user: SimpleUser | null = adminActive ? ADMIN_USER : firebaseUser;
+  const user: SimpleUser | null = adminActive
+    ? ADMIN_USER
+    : studentSession
+    ? { uid: studentSession.rfidUid, email: null }
+    : null;
 
-  const login = async (username: string, password: string) => {
-    if (username === "admin" && password === "admin123") {
-      sessionStorage.setItem(SESSION_KEY, "1");
+  const profile: UserProfile | null = adminActive
+    ? ADMIN_PROFILE
+    : studentSession
+    ? { role: "student", name: studentSession.name, rfidUid: studentSession.rfidUid }
+    : null;
+
+  const login = async (identifier: string, password?: string) => {
+    if (identifier === "admin" && password === "admin123") {
+      sessionStorage.setItem(ADMIN_SESSION_KEY, "1");
       setAdminActive(true);
       return;
     }
-    const cred = await signInWithEmailAndPassword(auth, username, password);
-    setFirebaseUser({ uid: cred.user.uid, email: cred.user.email });
+    // Student login: look up by roll number in Firestore
+    const snap = await getDocs(
+      query(collection(db, "students"), where("roll", "==", identifier))
+    );
+    if (snap.empty) throw new Error("No student found with that roll number.");
+    const d = snap.docs[0];
+    const session: StudentSession = {
+      rfidUid: d.id,
+      name: (d.data().name as string) ?? "",
+    };
+    sessionStorage.setItem(STUDENT_SESSION_KEY, JSON.stringify(session));
+    setStudentSession(session);
   };
 
   const logout = async () => {
     if (adminActive) {
-      sessionStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(ADMIN_SESSION_KEY);
       setAdminActive(false);
-      setProfile(null);
-      return;
+    } else {
+      sessionStorage.removeItem(STUDENT_SESSION_KEY);
+      setStudentSession(null);
     }
-    await signOut(auth);
   };
 
   return (

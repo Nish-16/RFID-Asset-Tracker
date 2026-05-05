@@ -3,31 +3,49 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Wifi, Mail, Lock, LogIn, ArrowLeft } from "lucide-react";
+import { Wifi, Lock, LogIn, ArrowLeft, Hash, User } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
+type Tab = "student" | "admin";
+
 export default function LoginPage() {
-  const { login, user, loading } = useAuth();
+  const { login, user, profile, loading } = useAuth();
   const router = useRouter();
+  const [tab, setTab] = useState<Tab>("student");
+  const [roll, setRoll] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Already logged in → go straight to dashboard
+  // Already logged in → redirect based on role
   useEffect(() => {
-    if (!loading && user) router.replace("/dashboard");
-  }, [user, loading, router]);
+    if (!loading && user) {
+      router.replace(profile?.role === "admin" ? "/dashboard" : "/inventory");
+    }
+  }, [user, loading, profile, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleStudentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSubmitting(true);
+    try {
+      await login(roll.trim());
+    } catch (err) {
+      setError((err as Error).message || "Roll number not found. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleAdminSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSubmitting(true);
     try {
       await login(username, password);
-      router.push("/dashboard");
     } catch {
-      setError("Invalid email or password. Please try again.");
+      setError("Invalid credentials. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -37,7 +55,6 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
-      {/* Gradient accent */}
       <div className="h-0.5 bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500" />
 
       <div className="flex flex-1 items-center justify-center px-6 py-16">
@@ -47,19 +64,33 @@ export default function LoginPage() {
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-200">
               <Wifi className="h-7 w-7 text-white" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Admin Sign In
-            </h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Sign In</h1>
             <p className="mt-1.5 text-sm text-slate-500">
-              Students can browse inventory without signing in
+              Students: enter your roll number to see issued components
             </p>
           </div>
 
+          {/* Tabs */}
+          <div className="mb-4 flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+            {(["student", "admin"] as Tab[]).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => { setTab(t); setError(""); }}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-medium capitalize transition-all ${
+                  tab === t
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {t === "student" ? <User className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+                {t}
+              </button>
+            ))}
+          </div>
+
           {/* Card */}
-          <form
-            onSubmit={handleSubmit}
-            className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm"
-          >
+          <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
             {error && (
               <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
                 <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -69,63 +100,98 @@ export default function LoginPage() {
               </div>
             )}
 
-            <div className="space-y-4">
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-                  Username
-                </label>
-                <div className="relative">
-                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                    autoComplete="username"
-                    placeholder="admin"
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-slate-800 outline-none placeholder:text-slate-400 transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100"
-                  />
+            {tab === "student" ? (
+              <form onSubmit={handleStudentSubmit} className="space-y-4">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                    Roll Number
+                  </label>
+                  <div className="relative">
+                    <Hash className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={roll}
+                      onChange={(e) => setRoll(e.target.value)}
+                      required
+                      autoFocus
+                      placeholder="e.g. 22BCE1234"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-slate-800 outline-none placeholder:text-slate-400 transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    placeholder="••••••••"
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-slate-800 outline-none placeholder:text-slate-400 transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100"
-                  />
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex w-full items-center justify-center gap-2 rounded-full bg-indigo-600 py-3 text-sm font-semibold text-white shadow-sm shadow-indigo-200 transition hover:bg-indigo-700 disabled:opacity-60 active:scale-95"
+                >
+                  {submitting ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <LogIn className="h-4 w-4" />
+                  )}
+                  {submitting ? "Looking up..." : "Sign In"}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleAdminSubmit} className="space-y-4">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                    Username
+                  </label>
+                  <div className="relative">
+                    <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      required
+                      autoComplete="username"
+                      placeholder="admin"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-slate-800 outline-none placeholder:text-slate-400 transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100"
+                    />
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-indigo-600 py-3 text-sm font-semibold text-white shadow-sm shadow-indigo-200 transition hover:bg-indigo-700 disabled:opacity-60 active:scale-95"
-            >
-              {submitting ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              ) : (
-                <LogIn className="h-4 w-4" />
-              )}
-              {submitting ? "Signing in..." : "Sign In"}
-            </button>
-          </form>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      placeholder="••••••••"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-slate-800 outline-none placeholder:text-slate-400 transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex w-full items-center justify-center gap-2 rounded-full bg-indigo-600 py-3 text-sm font-semibold text-white shadow-sm shadow-indigo-200 transition hover:bg-indigo-700 disabled:opacity-60 active:scale-95"
+                >
+                  {submitting ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <LogIn className="h-4 w-4" />
+                  )}
+                  {submitting ? "Signing in..." : "Sign In"}
+                </button>
+              </form>
+            )}
+          </div>
 
           <div className="mt-6 flex flex-col items-center gap-3 text-center">
             <Link
               href="/inventory"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 transition hover:text-indigo-800"
             >
-              Browse component inventory without signing in
+              Browse inventory without signing in
             </Link>
             <Link
               href="/"

@@ -12,11 +12,20 @@ import { ComponentCard } from "./_components/ComponentCard";
 import { AddComponentModal } from "./_components/AddComponentModal";
 import { IssueModal } from "./_components/IssueModal";
 
+interface MyTransaction {
+  id: string;
+  componentCode: string;
+  componentName: string;
+  issueTime: string;
+}
+
 export default function InventoryPage() {
   const { profile } = useAuth();
   const isAdmin = profile?.role === "admin";
+  const isStudent = profile?.role === "student";
 
   const [components, setComponents] = useState<ComponentType[]>([]);
+  const [myTransactions, setMyTransactions] = useState<MyTransaction[]>([]);
   const [issuedMap, setIssuedMap] = useState<Record<string, IssuedEntry[]>>({});
   const [loadingC, setLoadingC] = useState(true);
   const [loadingT, setLoadingT] = useState(true);
@@ -52,7 +61,7 @@ export default function InventoryPage() {
         map[code].push({
           txId: d.id,
           studentName: (data.studentName as string) ?? "Unknown",
-          uid: (data.uid as string) ?? "",
+          uid: (data.rfidUid as string) ?? "",
           issueTime: (data.issueTime as string) ?? "",
         });
       });
@@ -60,6 +69,25 @@ export default function InventoryPage() {
       setLoadingT(false);
     });
   }, []);
+
+  useEffect(() => {
+    if (!isStudent || !profile?.rfidUid) return;
+    const q = query(
+      collection(db, "transactions"),
+      where("rfidUid", "==", profile.rfidUid),
+      where("status", "==", "issued")
+    );
+    return onSnapshot(q, (snap) => {
+      setMyTransactions(
+        snap.docs.map((d) => ({
+          id: d.id,
+          componentCode: (d.data().componentCode as string) ?? "",
+          componentName: (d.data().componentName as string) ?? "",
+          issueTime: (d.data().issueTime as string) ?? "",
+        }))
+      );
+    });
+  }, [isStudent, profile?.rfidUid]);
 
   const rows: ComponentRow[] = components.map((c) => {
     const issued = issuedMap[c.code] ?? [];
@@ -133,6 +161,45 @@ export default function InventoryPage() {
             </button>
           )}
         </div>
+
+        {/* My Issued Components — signed-in students only */}
+        {isStudent && (
+          <div className="rounded-xl border border-slate-200 bg-white">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+              <h3 className="text-sm font-semibold text-slate-800">My Issued Components</h3>
+              {!profile?.rfidUid && (
+                <span className="text-xs text-slate-400">RFID card not linked to your account</span>
+              )}
+            </div>
+
+            {!profile?.rfidUid ? (
+              <p className="px-5 py-4 text-sm text-slate-500">
+                Ask an admin to link your RFID card to your account so you can track your issued items here.
+              </p>
+            ) : myTransactions.length === 0 ? (
+              <p className="px-5 py-4 text-sm text-slate-500">You have no components currently issued.</p>
+            ) : (
+              <ul className="divide-y divide-slate-100">
+                {myTransactions.map((tx) => (
+                  <li key={tx.id} className="flex items-center justify-between px-5 py-3.5">
+                    <div>
+                      <p className="text-sm font-medium text-slate-800">{tx.componentName}</p>
+                      <p className="text-xs text-slate-400">Code: {tx.componentCode}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+                        Issued
+                      </span>
+                      <p className="mt-0.5 text-xs text-slate-400">
+                        {tx.issueTime ? new Date(tx.issueTime).toLocaleDateString() : "—"}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

@@ -25,6 +25,16 @@ const DASHBOARD_NAV = {
   ),
 };
 
+const MY_COMPONENTS_NAV = {
+  href: "/dashboard",
+  label: "My Components",
+  icon: (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+    </svg>
+  ),
+};
+
 export default function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -114,7 +124,11 @@ export default function NavBar() {
 
           {/* Nav tabs */}
           <nav className="flex gap-1 -mb-px">
-            {[INVENTORY_NAV, ...(profile?.role === "admin" ? [DASHBOARD_NAV] : [])].map(
+            {[
+            INVENTORY_NAV,
+            ...(profile?.role === "admin" ? [DASHBOARD_NAV] : []),
+            ...(profile?.role === "student" ? [MY_COMPONENTS_NAV] : []),
+          ].map(
               ({ href, label, icon }) => {
                 const active = pathname === href;
                 return (

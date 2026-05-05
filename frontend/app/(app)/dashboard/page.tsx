@@ -6,15 +6,15 @@ import { useAuth } from "@/lib/auth-context";
 import TransactionTable from "@/components/TransactionTable";
 
 export default function DashboardPage() {
-  const { profile, loading } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
-  const isAdmin = profile?.role === "admin";
 
+  // Only block unauthenticated visitors — both admins and students can see this page
   useEffect(() => {
-    if (!loading && !isAdmin) router.replace("/login");
-  }, [isAdmin, loading, router]);
+    if (!loading && !user) router.replace("/login");
+  }, [user, loading, router]);
 
-  if (loading || !isAdmin) {
+  if (loading || !user) {
     return (
       <div className="flex min-h-96 items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-slate-200 border-t-indigo-500" />
